@@ -1,8 +1,10 @@
 """
 Bingo Musical — App web para generar el PDF de cartones.
+Optimizada para móvil.
 """
 import io, os, tempfile, math
 import streamlit as st
+from generar_bingo import PLAYLIST as PLAYLIST_DEFAULT, generar_pdf, CANCIONES_POR_CARTON
 
 st.set_page_config(page_title="Bingo Musical 🎵", page_icon="🎵", layout="centered")
 
@@ -20,47 +22,53 @@ h1 { color: #1A4A2E !important; font-family: 'Abril Fatface', Georgia, serif !im
 .subtitle { text-align: center; color: #B8872A; font-style: italic;
             font-size: 1.05rem; margin-bottom: 1.5rem; }
 
-.song-card {
-    background: white;
-    border: 1.5px solid #D4C5A0;
-    border-radius: 8px;
-    padding: 0.6rem 0.8rem;
-    margin-bottom: 0.5rem;
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
+/* Botón secundario (Añadir / Eliminar) */
+div[data-testid="stButton"] > button[kind="secondary"] {
+    background: white; color: #1A4A2E; border: 1.5px solid #1A4A2E;
+    border-radius: 8px; font-weight: bold;
 }
+div[data-testid="stButton"] > button[kind="secondary"]:hover { background: #F0EBD8; border-color: #1A4A2E; color: #1A4A2E; }
 
-div[data-testid="stButton"] > button {
+/* Botón primario (Generar) */
+div[data-testid="stButton"] > button[kind="primary"] {
     background: #1A4A2E; color: white; border: none;
-    border-radius: 6px; font-weight: bold;
-    transition: background 0.2s;
+    border-radius: 8px; font-weight: bold; font-size: 1.1rem;
+    padding: 0.6rem;
 }
-div[data-testid="stButton"] > button:hover { background: #B8872A; }
+div[data-testid="stButton"] > button[kind="primary"]:hover { background: #133822; }
 
+/* Botón Descargar PDF */
 div[data-testid="stDownloadButton"] > button {
     background: #B8872A !important; color: white !important;
-    border: none !important; border-radius: 6px !important;
+    border: none !important; border-radius: 8px !important;
     font-size: 1.1rem !important; font-weight: bold !important;
-    width: 100%;
+    width: 100%; padding: 0.8rem !important;
 }
+div[data-testid="stDownloadButton"] > button:hover { background: #966C20 !important; }
 
 .counter-box {
     background: #F0EBD8; border: 1px solid #C8B878;
     border-radius: 8px; padding: 0.8rem 1rem;
     text-align: center; margin: 0.8rem 0;
 }
-.counter-ok  { color: #1A4A2E; font-weight: bold; }
-.counter-warn { color: #B8872A; font-weight: bold; }
+.counter-ok  { color: #1A4A2E; font-weight: bold; font-size: 1.1rem; }
 .counter-err  { color: #C0392B; font-weight: bold; }
+
+/* Ajustes para móvil */
+@media (max-width: 640px) {
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    h1 { font-size: 2rem !important; }
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ── Título ─────────────────────────────────────────────────────────────────────
 st.markdown("<h1>🎵 Bingo Musical</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">60 cumpleaños de Paco y Mariadel</p>', unsafe_allow_html=True)
-
-from generar_bingo import PLAYLIST as PLAYLIST_DEFAULT, generar_pdf, CANCIONES_POR_CARTON
 
 # ── Estado de la sesión ────────────────────────────────────────────────────────
 if "canciones" not in st.session_state:
@@ -73,12 +81,13 @@ canciones = st.session_state.canciones
 # ── Foto ───────────────────────────────────────────────────────────────────────
 st.markdown("### 📷 Foto central")
 foto_subida = st.file_uploader(
-    "Sube una foto (opcional, se usará la de Paco y Mariadel si no subes ninguna)",
+    "Sube una foto (opcional)",
     type=["jpg", "jpeg", "png"],
     label_visibility="visible",
+    help="Se usará la foto de Paco y Mariadel por defecto si no subes ninguna."
 )
 if foto_subida:
-    st.image(foto_subida, width=180)
+    st.image(foto_subida, width=150)
 
 st.markdown("---")
 
@@ -86,39 +95,29 @@ st.markdown("---")
 st.markdown("### 🎶 Canciones del bingo")
 st.caption("Añade, edita o elimina canciones. Necesitas mínimo 8 para generar al menos 1 cartón.")
 
-# Botón añadir canción (arriba, bien visible)
-if st.button("➕  Añadir canción", use_container_width=False):
+if st.button("➕ Añadir canción", use_container_width=True):
     st.session_state.canciones.append({"titulo": "", "artista": ""})
     st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Renderizar cada canción como una fila compacta
 indices_a_borrar = []
 for i, cancion in enumerate(canciones):
-    col_num, col_titulo, col_artista, col_del = st.columns([0.4, 3, 2.5, 0.6])
-    with col_num:
-        st.markdown(f"<div style='padding-top:0.45rem;color:#888;font-size:0.9rem;text-align:right'>{i+1}.</div>",
-                    unsafe_allow_html=True)
-    with col_titulo:
-        nuevo_titulo = st.text_input(
+    with st.container(border=True):
+        st.markdown(f"<div style='color:#1A4A2E; font-weight:bold; margin-bottom:0.5rem;'>🎵 Canción {i+1}</div>", unsafe_allow_html=True)
+        st.session_state.canciones[i]["titulo"] = st.text_input(
             f"titulo_{i}", value=cancion["titulo"],
             placeholder="Título de la canción",
-            label_visibility="collapsed", key=f"t_{i}"
+            label_visibility="collapsed"
         )
-        st.session_state.canciones[i]["titulo"] = nuevo_titulo
-    with col_artista:
-        nuevo_artista = st.text_input(
+        st.session_state.canciones[i]["artista"] = st.text_input(
             f"artista_{i}", value=cancion["artista"],
-            placeholder="Artista",
-            label_visibility="collapsed", key=f"a_{i}"
+            placeholder="Artista de la canción",
+            label_visibility="collapsed"
         )
-        st.session_state.canciones[i]["artista"] = nuevo_artista
-    with col_del:
-        if st.button("🗑️", key=f"del_{i}", help="Eliminar esta canción"):
+        if st.button("🗑️ Eliminar", key=f"del_{i}", use_container_width=True):
             indices_a_borrar.append(i)
 
-# Eliminar canciones marcadas
 if indices_a_borrar:
     st.session_state.canciones = [
         c for j, c in enumerate(st.session_state.canciones)
@@ -136,24 +135,22 @@ playlist_valida = [
 ]
 n = len(playlist_valida)
 
-# Calcular cuántos cartones únicos son posibles: C(n, 8)
 if n >= CANCIONES_POR_CARTON:
     max_unicos = math.comb(n, CANCIONES_POR_CARTON)
-    max_cartones = min(200, max_unicos)
     clase = "counter-ok"
-    msg = f"✔ {n} canciones · hasta <b>{max_unicos:,}</b> cartones únicos posibles"
+    msg = f"✔ {n} canciones <br> <span style='font-size:0.9rem; font-weight:normal;'>Hasta <b>{max_unicos:,}</b> cartones únicos posibles</span>"
 else:
-    max_cartones = 0
+    max_unicos = 0
     clase = "counter-err"
-    msg = f"✘ {n} canciones — necesitas al menos <b>{CANCIONES_POR_CARTON}</b> para generar cartones"
+    msg = f"✘ {n} canciones <br> <span style='font-size:0.9rem; font-weight:normal;'>Necesitas al menos <b>{CANCIONES_POR_CARTON}</b></span>"
 
-st.markdown(f'<div class="counter-box"><span class="{clase}">{msg}</span></div>',
+st.markdown(f'<div class="counter-box"><div class="{clase}">{msg}</div></div>',
             unsafe_allow_html=True)
 
 # ── Opciones ───────────────────────────────────────────────────────────────────
 if n >= CANCIONES_POR_CARTON:
     num_cartones = st.number_input(
-        f"Número de cartones a generar (máx. {min(200, max_unicos)})",
+        f"Número de cartones a generar",
         min_value=1,
         max_value=min(200, max_unicos),
         value=min(65, min(200, max_unicos)),
@@ -167,10 +164,9 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ── Botón generar ──────────────────────────────────────────────────────────────
 puede_generar = n >= CANCIONES_POR_CARTON
 
-if st.button("🖨️  Generar PDF", disabled=not puede_generar, use_container_width=True):
+if st.button("🖨️ Generar PDF", type="primary", disabled=not puede_generar, use_container_width=True):
     with st.spinner("Generando PDF... ⏳"):
         try:
-            # Foto
             if foto_subida:
                 suf = ".jpg" if foto_subida.name.lower().endswith(("jpg", "jpeg")) else ".png"
                 tmp_foto = tempfile.NamedTemporaryFile(delete=False, suffix=suf)
@@ -180,7 +176,6 @@ if st.button("🖨️  Generar PDF", disabled=not puede_generar, use_container_w
             else:
                 foto_path = None
 
-            # PDF
             tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
             tmp_pdf.close()
 
@@ -205,10 +200,9 @@ if st.button("🖨️  Generar PDF", disabled=not puede_generar, use_container_w
         except Exception as e:
             st.error(f"Error al generar el PDF: {e}")
 
-# Botón de descarga (persiste aunque se pulse generar de nuevo)
 if "pdf_bytes" in st.session_state:
     st.download_button(
-        label="⬇️  Descargar PDF",
+        label="⬇️ Descargar PDF",
         data=st.session_state["pdf_bytes"],
         file_name="bingo_musical.pdf",
         mime="application/pdf",
