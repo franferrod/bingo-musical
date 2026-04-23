@@ -91,49 +91,20 @@ if foto_subida:
 
 st.markdown("---")
 
-# ── Lista de canciones ─────────────────────────────────────────────────────────
-st.markdown("### 🎶 Canciones del bingo")
-st.caption("Añade, edita o elimina canciones. Necesitas mínimo 8 para generar al menos 1 cartón.")
+# ───────────────────────────────────────────────────────────────────────────────
+# 🖨️ ZONA DE GENERACIÓN (Movida al inicio por UX)
+# ───────────────────────────────────────────────────────────────────────────────
+st.markdown("### 🖨️ Generar Bingo")
 
-if st.button("➕ Añadir canción", use_container_width=True):
-    # Insertar al principio para no tener que hacer scroll hacia abajo
-    st.session_state.canciones.insert(0, {"titulo": "", "artista": ""})
-    st.rerun()
+# Para calcular las canciones válidas sin esperar a que se rendericen los inputs de abajo,
+# leemos directamente los valores del session_state actualizados por Streamlit en este frame.
+playlist_valida = []
+for i, c in enumerate(canciones):
+    t = st.session_state.get(f"t_{i}", c["titulo"]).strip()
+    a = st.session_state.get(f"a_{i}", c["artista"]).strip()
+    if t and a:
+        playlist_valida.append((t, a))
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-indices_a_borrar = []
-for i, cancion in enumerate(canciones):
-    with st.container(border=True):
-        st.markdown(f"<div style='color:#1A4A2E; font-weight:bold; margin-bottom:0.5rem;'>🎵 Canción {i+1}</div>", unsafe_allow_html=True)
-        st.session_state.canciones[i]["titulo"] = st.text_input(
-            f"titulo_{i}", value=cancion["titulo"],
-            placeholder="Título de la canción",
-            label_visibility="collapsed"
-        )
-        st.session_state.canciones[i]["artista"] = st.text_input(
-            f"artista_{i}", value=cancion["artista"],
-            placeholder="Artista de la canción",
-            label_visibility="collapsed"
-        )
-        if st.button("🗑️ Eliminar", key=f"del_{i}", use_container_width=True):
-            indices_a_borrar.append(i)
-
-if indices_a_borrar:
-    st.session_state.canciones = [
-        c for j, c in enumerate(st.session_state.canciones)
-        if j not in indices_a_borrar
-    ]
-    st.rerun()
-
-st.markdown("---")
-
-# ── Validación y contador ──────────────────────────────────────────────────────
-playlist_valida = [
-    (c["titulo"].strip(), c["artista"].strip())
-    for c in st.session_state.canciones
-    if c["titulo"].strip() and c["artista"].strip()
-]
 n = len(playlist_valida)
 
 if n >= CANCIONES_POR_CARTON:
@@ -148,7 +119,6 @@ else:
 st.markdown(f'<div class="counter-box"><div class="{clase}">{msg}</div></div>',
             unsafe_allow_html=True)
 
-# ── Opciones ───────────────────────────────────────────────────────────────────
 if n >= CANCIONES_POR_CARTON:
     num_cartones = st.number_input(
         f"Número de cartones a generar",
@@ -162,9 +132,7 @@ else:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Botón generar ──────────────────────────────────────────────────────────────
 puede_generar = n >= CANCIONES_POR_CARTON
-
 if st.button("🖨️ Generar PDF", type="primary", disabled=not puede_generar, use_container_width=True):
     with st.spinner("Generando PDF... ⏳"):
         try:
@@ -209,6 +177,46 @@ if "pdf_bytes" in st.session_state:
         mime="application/pdf",
         use_container_width=True,
     )
+
+st.markdown("---")
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎶 LISTA DE CANCIONES (Movida abajo)
+# ───────────────────────────────────────────────────────────────────────────────
+st.markdown("### 🎶 Canciones del bingo")
+st.caption("Añade, edita o elimina canciones. Necesitas mínimo 8 para generar al menos 1 cartón.")
+
+if st.button("➕ Añadir canción", use_container_width=True):
+    st.session_state.canciones.insert(0, {"titulo": "", "artista": ""})
+    st.rerun()
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+indices_a_borrar = []
+for i, cancion in enumerate(canciones):
+    with st.container(border=True):
+        st.markdown(f"<div style='color:#1A4A2E; font-weight:bold; margin-bottom:0.5rem;'>🎵 Canción {i+1}</div>", unsafe_allow_html=True)
+        st.session_state.canciones[i]["titulo"] = st.text_input(
+            f"titulo_{i}", value=cancion["titulo"],
+            placeholder="Título de la canción",
+            label_visibility="collapsed",
+            key=f"t_{i}"
+        )
+        st.session_state.canciones[i]["artista"] = st.text_input(
+            f"artista_{i}", value=cancion["artista"],
+            placeholder="Artista de la canción",
+            label_visibility="collapsed",
+            key=f"a_{i}"
+        )
+        if st.button("🗑️ Eliminar", key=f"del_{i}", use_container_width=True):
+            indices_a_borrar.append(i)
+
+if indices_a_borrar:
+    st.session_state.canciones = [
+        c for j, c in enumerate(st.session_state.canciones)
+        if j not in indices_a_borrar
+    ]
+    st.rerun()
 
 st.markdown("---")
 st.caption("Bingo Musical · 2025")
