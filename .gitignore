@@ -1,0 +1,17 @@
+# Archivos generados
+bingo_paco_mariadel.pdf
+*.pdf
+v4_*.png
+v5_*.png
+v6_*.png
+final*.png
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Sistema
+.DS_Store
+Thumbs.db
