@@ -70,6 +70,14 @@ div[data-testid="stDownloadButton"] > button:hover { background: #966C20 !import
 st.markdown("<h1>🎵 Bingo Musical</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">60 cumpleaños de Paco y Mariadel</p>', unsafe_allow_html=True)
 
+st.info("""
+**👋 ¡Hola! Pasos rápidos:**
+1. 📷 **Sube la foto** que irá en el centro del cartón (opcional).
+2. 🖨️ **Elige cuántos cartones** quieres generar.
+3. 🎵 Revisa la **lista de canciones** abajo si quieres cambiar alguna.
+4. Pulsa **"Generar PDF"** y descarga el archivo listo para imprimir.
+""")
+
 # ── Estado de la sesión ────────────────────────────────────────────────────────
 if "canciones" not in st.session_state:
     st.session_state.canciones = [
