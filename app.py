@@ -96,7 +96,8 @@ st.markdown("### 🎶 Canciones del bingo")
 st.caption("Añade, edita o elimina canciones. Necesitas mínimo 8 para generar al menos 1 cartón.")
 
 if st.button("➕ Añadir canción", use_container_width=True):
-    st.session_state.canciones.append({"titulo": "", "artista": ""})
+    # Insertar al principio para no tener que hacer scroll hacia abajo
+    st.session_state.canciones.insert(0, {"titulo": "", "artista": ""})
     st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
