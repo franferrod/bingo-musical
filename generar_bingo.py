@@ -215,7 +215,7 @@ def available_font(preferred, fallback="Helvetica"):
 # DIBUJO DE CABECERA
 # ─────────────────────────────────────────────────────────────────────────────
 
-def draw_header(c, x, y, w, h):
+def draw_header(c, x, y, w, h, titulo="60 cumpleaños Paco y Mariadel"):
     """
     Cabecera: BINGO / MUSICAL / ovalo — distribuidos de arriba a abajo
     sin solapamientos. Calculo de posicion vertical desde arriba.
@@ -285,7 +285,7 @@ def draw_header(c, x, y, w, h):
     c.drawCentredString(cx, musical_baseline, "MUSICAL")
 
     # ── Ovalo con leyenda ────────────────────────────────────────────────────
-    leyenda_text = "60 cumpleaños Paco y Mariadel"
+    leyenda_text = titulo
     text_width   = c.stringWidth(leyenda_text, font_leyenda, size_leyenda)
     oval_pad_h   = size_leyenda * 2.0   # padding horizontal holgado
     oval_w       = min(w * 0.88, text_width + 2 * oval_pad_h)
@@ -349,7 +349,7 @@ def draw_song_cell(c, cx, cy, cw, ch, titulo, artista):
 # DIBUJO DE UN CARTON COMPLETO
 # ─────────────────────────────────────────────────────────────────────────────
 
-def draw_carton(c, x, y, w, h, canciones, foto_reader):
+def draw_carton(c, x, y, w, h, canciones, foto_reader, titulo="60 cumpleaños Paco y Mariadel"):
     """
     Dibuja un carton en (x,y) con tamano (w,h).
     canciones: lista de 8 tuplas (titulo, artista).
@@ -367,7 +367,7 @@ def draw_carton(c, x, y, w, h, canciones, foto_reader):
     header_ratio = 0.32
     header_h = h * header_ratio
     header_y = y + h - header_h
-    draw_header(c, x, header_y, w, header_h)
+    draw_header(c, x, header_y, w, header_h, titulo)
 
     # ── Grid 3x3 ─────────────────────────────────────────────────────────────
     grid_margin_x = w * 0.028
@@ -419,7 +419,7 @@ def draw_carton(c, x, y, w, h, canciones, foto_reader):
 # DIBUJO DE PAGINA
 # ─────────────────────────────────────────────────────────────────────────────
 
-def draw_page(c, cartones_pagina, foto_reader, page_w, page_h):
+def draw_page(c, cartones_pagina, foto_reader, page_w, page_h, titulo="60 cumpleaños Paco y Mariadel"):
     # Fondo de pagina BLANCO puro — para recorte limpio de los cartones
     c.setFillColor(colors.white)
     c.rect(0, 0, page_w, page_h, fill=1, stroke=0)
@@ -450,11 +450,11 @@ def draw_page(c, cartones_pagina, foto_reader, page_w, page_h):
 
     for i, canciones in enumerate(cartones_pagina):
         cx, cy = positions[i]
-        draw_carton(c, cx, cy, card_w, card_h, canciones, foto_reader)
+        draw_carton(c, cx, cy, card_w, card_h, canciones, foto_reader, titulo)
 
 
 
-def generar_pdf(playlist=None, foto_path=None, output_path=None, num_cartones=None):
+def generar_pdf(playlist=None, foto_path=None, output_path=None, num_cartones=None, titulo=None):
     """
     Funcion principal reutilizable.
     - playlist: lista de tuplas (titulo, artista). Si None, usa PLAYLIST global.
@@ -467,6 +467,7 @@ def generar_pdf(playlist=None, foto_path=None, output_path=None, num_cartones=No
     _foto_path   = foto_path   if foto_path   is not None else FOTO_PATH
     _output_path = output_path if output_path is not None else OUTPUT_PATH
     _n           = num_cartones if num_cartones is not None else NUM_CARTONES
+    _titulo      = titulo      if titulo      is not None else "60 cumpleaños Paco y Mariadel"
 
     register_fonts()
 
@@ -503,14 +504,14 @@ def generar_pdf(playlist=None, foto_path=None, output_path=None, num_cartones=No
     foto_reader = make_cropped_reader(_foto_path, cell_w, cell_h)
 
     c = canvas.Canvas(_output_path, pagesize=A4)
-    c.setTitle("Bingo Musical - 60 cumpleaños Paco y Mariadel")
+    c.setTitle(f"Bingo Musical - {_titulo}")
     c.setAuthor("Bingo Musical")
 
     i = 0
     while i < _n:
         lote = cartones[i : i + 4]
         c.saveState()
-        draw_page(c, lote, foto_reader, page_w, page_h)
+        draw_page(c, lote, foto_reader, page_w, page_h, _titulo)
         c.restoreState()
         c.showPage()
         i += 4

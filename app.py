@@ -6,6 +6,15 @@ import io, os, tempfile, math
 import streamlit as st
 from generar_bingo import PLAYLIST as PLAYLIST_DEFAULT, generar_pdf, CANCIONES_POR_CARTON
 
+
+def _clear_song_widget_keys():
+    """Elimina todas las keys de widgets de canciones para evitar
+    conflictos de índices al añadir/eliminar canciones."""
+    keys_to_remove = [k for k in st.session_state
+                      if k.startswith("t_") or k.startswith("a_") or k.startswith("del_")]
+    for k in keys_to_remove:
+        del st.session_state[k]
+
 st.set_page_config(page_title="Bingo Musical 🎵", page_icon="🎵", layout="centered")
 
 st.markdown("""
@@ -68,7 +77,13 @@ div[data-testid="stDownloadButton"] > button:hover { background: #966C20 !import
 
 # ── Título ─────────────────────────────────────────────────────────────────────
 st.markdown("<h1>🎵 Bingo Musical</h1>", unsafe_allow_html=True)
-st.markdown('<p class="subtitle">60 cumpleaños de Paco y Mariadel</p>', unsafe_allow_html=True)
+
+# ── Estado de la sesión: título del cartón ─────────────────────────────────────
+if "titulo_carton" not in st.session_state:
+    st.session_state.titulo_carton = "60 cumpleaños de Paco y Mariadel"
+
+st.markdown('<p class="subtitle">' + st.session_state.titulo_carton + '</p>',
+            unsafe_allow_html=True)
 
 st.info("""
 **👋 ¡Hola! Pasos rápidos:**
@@ -85,6 +100,21 @@ if "canciones" not in st.session_state:
     ]
 
 canciones = st.session_state.canciones
+
+# ── Título del cartón ──────────────────────────────────────────────────────────
+st.markdown("### ✏️ Título del cartón")
+titulo_input = st.text_input(
+    "Título que aparecerá en los cartones",
+    value=st.session_state.titulo_carton,
+    placeholder="Escribe el título del evento",
+    key="titulo_carton_input",
+    help="Este texto aparecerá en el óvalo dorado de cada cartón.",
+)
+if titulo_input != st.session_state.titulo_carton:
+    st.session_state.titulo_carton = titulo_input
+    st.rerun()
+
+st.markdown("---")
 
 # ── Foto ───────────────────────────────────────────────────────────────────────
 st.markdown("### 📷 Foto central")
@@ -161,6 +191,7 @@ if st.button("🖨️ Generar PDF", type="primary", disabled=not puede_generar, 
                 foto_path=foto_path,
                 output_path=tmp_pdf.name,
                 num_cartones=int(num_cartones),
+                titulo=st.session_state.titulo_carton,
             )
 
             with open(tmp_pdf.name, "rb") as f:
@@ -196,6 +227,7 @@ st.caption("Añade, edita o elimina canciones. Necesitas mínimo 8 para generar 
 
 if st.button("➕ Añadir canción", use_container_width=True):
     st.session_state.canciones.insert(0, {"titulo": "", "artista": ""})
+    _clear_song_widget_keys()
     st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -220,10 +252,15 @@ for i, cancion in enumerate(canciones):
             indices_a_borrar.append(i)
 
 if indices_a_borrar:
+    # Guardar los valores actuales de los widgets antes de limpiar
+    for i, c in enumerate(canciones):
+        c["titulo"] = st.session_state.get(f"t_{i}", c["titulo"])
+        c["artista"] = st.session_state.get(f"a_{i}", c["artista"])
     st.session_state.canciones = [
         c for j, c in enumerate(st.session_state.canciones)
         if j not in indices_a_borrar
     ]
+    _clear_song_widget_keys()
     st.rerun()
 
 st.markdown("---")
