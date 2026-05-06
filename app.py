@@ -6,15 +6,6 @@ import io, os, tempfile, math
 import streamlit as st
 from generar_bingo import PLAYLIST as PLAYLIST_DEFAULT, generar_pdf, CANCIONES_POR_CARTON
 
-
-def _clear_song_widget_keys():
-    """Elimina todas las keys de widgets de canciones para evitar
-    conflictos de índices al añadir/eliminar canciones."""
-    keys_to_remove = [k for k in st.session_state
-                      if k.startswith("t_") or k.startswith("a_") or k.startswith("del_")]
-    for k in keys_to_remove:
-        del st.session_state[k]
-
 st.set_page_config(page_title="Bingo Musical 🎵", page_icon="🎵", layout="centered")
 
 st.markdown("""
@@ -78,9 +69,19 @@ div[data-testid="stDownloadButton"] > button:hover { background: #966C20 !import
 # ── Título ─────────────────────────────────────────────────────────────────────
 st.markdown("<h1>🎵 Bingo Musical</h1>", unsafe_allow_html=True)
 
-# ── Estado de la sesión: título del cartón ─────────────────────────────────────
+# ── Estado de la sesión ────────────────────────────────────────────────────────
 if "titulo_carton" not in st.session_state:
     st.session_state.titulo_carton = "60 cumpleaños de Paco y Mariadel"
+
+if "canciones" not in st.session_state:
+    st.session_state.canciones = [
+        {"titulo": t, "artista": a} for t, a in PLAYLIST_DEFAULT
+    ]
+
+# Contador de versión: al cambiarlo, todas las claves de widget de canciones
+# se regeneran con nombres nuevos, evitando que Streamlit restaure valores viejos.
+if "ver" not in st.session_state:
+    st.session_state.ver = 0
 
 st.markdown('<p class="subtitle">' + st.session_state.titulo_carton + '</p>',
             unsafe_allow_html=True)
@@ -93,13 +94,8 @@ st.info("""
 4. Pulsa **"Generar PDF"** y descarga el archivo listo para imprimir.
 """)
 
-# ── Estado de la sesión ────────────────────────────────────────────────────────
-if "canciones" not in st.session_state:
-    st.session_state.canciones = [
-        {"titulo": t, "artista": a} for t, a in PLAYLIST_DEFAULT
-    ]
-
 canciones = st.session_state.canciones
+ver = st.session_state.ver  # versión actual para las claves de widget
 
 # ── Título del cartón ──────────────────────────────────────────────────────────
 st.markdown("### ✏️ Título del cartón")
@@ -130,16 +126,15 @@ if foto_subida:
 st.markdown("---")
 
 # ───────────────────────────────────────────────────────────────────────────────
-# 🖨️ ZONA DE GENERACIÓN (Movida al inicio por UX)
+# 🖨️ ZONA DE GENERACIÓN
 # ───────────────────────────────────────────────────────────────────────────────
 st.markdown("### 🖨️ Generar Bingo")
 
-# Para calcular las canciones válidas sin esperar a que se rendericen los inputs de abajo,
-# leemos directamente los valores del session_state actualizados por Streamlit en este frame.
+# Leer valores actuales de los widgets de canciones para calcular la playlist válida
 playlist_valida = []
 for i, c in enumerate(canciones):
-    t = st.session_state.get(f"t_{i}", c["titulo"]).strip()
-    a = st.session_state.get(f"a_{i}", c["artista"]).strip()
+    t = st.session_state.get(f"t_{ver}_{i}", c["titulo"]).strip()
+    a = st.session_state.get(f"a_{ver}_{i}", c["artista"]).strip()
     if t and a:
         playlist_valida.append((t, a))
 
@@ -220,48 +215,53 @@ if "pdf_bytes" in st.session_state:
 st.markdown("---")
 
 # ───────────────────────────────────────────────────────────────────────────────
-# 🎶 LISTA DE CANCIONES (Movida abajo)
+# 🎶 LISTA DE CANCIONES
 # ───────────────────────────────────────────────────────────────────────────────
 st.markdown("### 🎶 Canciones del bingo")
 st.caption("Añade, edita o elimina canciones. Necesitas mínimo 8 para generar al menos 1 cartón.")
 
-if st.button("➕ Añadir canción", use_container_width=True):
+
+# ── Callbacks para Añadir y Eliminar ──────────────────────────────────────────
+def _sync_widgets_to_list():
+    """Copia los valores actuales de los widgets de texto a la lista de canciones."""
+    for i, c in enumerate(st.session_state.canciones):
+        c["titulo"] = st.session_state.get(f"t_{ver}_{i}", c["titulo"])
+        c["artista"] = st.session_state.get(f"a_{ver}_{i}", c["artista"])
+
+
+def _add_song():
+    _sync_widgets_to_list()
     st.session_state.canciones.insert(0, {"titulo": "", "artista": ""})
-    _clear_song_widget_keys()
-    st.rerun()
+    st.session_state.ver += 1  # nueva versión → claves nuevas
+
+
+def _delete_song(idx):
+    _sync_widgets_to_list()
+    st.session_state.canciones.pop(idx)
+    st.session_state.ver += 1  # nueva versión → claves nuevas
+
+
+st.button("➕ Añadir canción", use_container_width=True, on_click=_add_song)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-indices_a_borrar = []
 for i, cancion in enumerate(canciones):
     with st.container(border=True):
         st.markdown(f"<div style='color:#1A4A2E; font-weight:bold; margin-bottom:0.5rem;'>🎵 Canción {i+1}</div>", unsafe_allow_html=True)
-        st.session_state.canciones[i]["titulo"] = st.text_input(
-            f"titulo_{i}", value=cancion["titulo"],
+        st.text_input(
+            f"titulo_{ver}_{i}", value=cancion["titulo"],
             placeholder="Título de la canción",
             label_visibility="collapsed",
-            key=f"t_{i}"
+            key=f"t_{ver}_{i}"
         )
-        st.session_state.canciones[i]["artista"] = st.text_input(
-            f"artista_{i}", value=cancion["artista"],
+        st.text_input(
+            f"artista_{ver}_{i}", value=cancion["artista"],
             placeholder="Artista de la canción",
             label_visibility="collapsed",
-            key=f"a_{i}"
+            key=f"a_{ver}_{i}"
         )
-        if st.button("🗑️ Eliminar", key=f"del_{i}", use_container_width=True):
-            indices_a_borrar.append(i)
-
-if indices_a_borrar:
-    # Guardar los valores actuales de los widgets antes de limpiar
-    for i, c in enumerate(canciones):
-        c["titulo"] = st.session_state.get(f"t_{i}", c["titulo"])
-        c["artista"] = st.session_state.get(f"a_{i}", c["artista"])
-    st.session_state.canciones = [
-        c for j, c in enumerate(st.session_state.canciones)
-        if j not in indices_a_borrar
-    ]
-    _clear_song_widget_keys()
-    st.rerun()
+        st.button("🗑️ Eliminar", key=f"del_{ver}_{i}", use_container_width=True,
+                   on_click=_delete_song, args=(i,))
 
 st.markdown("---")
 st.caption("Bingo Musical · 2025")
